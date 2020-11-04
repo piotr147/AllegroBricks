@@ -25,36 +25,39 @@ namespace AllegroBricks
             string requestBody = await new StreamReader(req.Body).ReadToEndAsync();
             dynamic data = JsonConvert.DeserializeObject(requestBody);
 
-
             try
             {
-                string mail = data?.mail;
-                string number = data?.number;
-                int? diffPercent = null;
-                if (int.TryParse((string)data?.diffPercent, out int parsedDiffPercent))
-                {
-                    diffPercent = parsedDiffPercent;
-                }
-
-                int? diffPln = null;
-                if (int.TryParse((string)data?.diffPln, out int parsedDiffPln))
-                {
-                    diffPln = parsedDiffPln;
-                }
-
-                await AddNewSubscription(mail, number, diffPercent, diffPln);
+                return await TryAddSubscription(data);
             }
             catch (Exception e)
             {
                 log.LogError(e.Message);
                 throw;
             }
-
-
-            return new OkObjectResult("Subscription has been added");
         }
 
-        private async static Task AddNewSubscription(string mail, string number, int? diffPercent, int? diffPln)
+        private async static Task<IActionResult> TryAddSubscription(dynamic data)
+        {
+            string mail = data?.mail;
+            string number = data?.number;
+            int? diffPercent = null;
+            if (int.TryParse((string)data?.diffPercent, out int parsedDiffPercent))
+            {
+                diffPercent = parsedDiffPercent;
+            }
+
+            int? diffPln = null;
+            if (int.TryParse((string)data?.diffPln, out int parsedDiffPln))
+            {
+                diffPln = parsedDiffPln;
+            }
+
+            string setName = await AddNewSubscriptionAndGetName(mail, number, diffPercent, diffPln);
+
+            return new OkObjectResult($"Subscription has been added for {setName}");
+        }
+
+        private async static Task<string> AddNewSubscriptionAndGetName(string mail, string number, int? diffPercent, int? diffPln)
         {
             using SqlConnection conn = ConnectionFactory.CreateConnection();
             conn.Open();
@@ -62,6 +65,8 @@ namespace AllegroBricks
             LegoSet set = await SubscriptionDbUtilities.GetOrCreateSet(conn, int.Parse(number));
             Subscription subscription = CreateSubscription(subscriber, set, diffPercent, diffPln);
             SubscriptionDbUtilities.CreateOrUpdateSubscriptionInDb(conn, subscription);
+
+            return set.Name;
         }
 
         private static Subscription CreateSubscription(
