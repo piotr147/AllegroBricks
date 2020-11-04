@@ -47,7 +47,7 @@ namespace AllegroBricks.Utilities
             decimal basePrice = set.CatalogPrice.Value > set.LowestPrice
                 ? set.CatalogPrice.Value
                 : set.LowestPrice;
-            decimal priceFrom = 0.4m * basePrice;
+            decimal priceFrom = 0.6m * basePrice;
 
             return (int)priceFrom;
         }

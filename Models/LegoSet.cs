@@ -23,5 +23,23 @@ namespace AllegroBricks.Models
             AllegroSearchUrl = url;
             return this;
         }
+
+        public LegoSet WithAllegroLowestUrl(string url)
+        {
+            AllegroLowestUrl = url;
+            return this;
+        }
+
+        public LegoSet WithLowestPrice(decimal price)
+        {
+            LowestPrice = price;
+            return this;
+        }
+
+        public LegoSet UpdateLastUpdate()
+        {
+            LastPriceUpdate = DateTime.Now;
+            return this;
+        }
     }
 }
