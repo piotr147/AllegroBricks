@@ -34,7 +34,7 @@ namespace AllegroBricks.Utilities
 
         private static void AppendPriceFrom(LegoSet set)
         {
-            builder.Append($"&price_from=999{GetPriceFrom(set)}");
+            builder.Append($"&price_from={GetPriceFrom(set)}");
         }
 
         private static int GetPriceFrom(LegoSet set)

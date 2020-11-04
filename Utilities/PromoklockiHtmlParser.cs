@@ -80,7 +80,7 @@ namespace AllegroBricks.Utilities
             {
                 string catalogPriceWithTrash = CatalogPriceRegex.Match(data).Value;
                 int lastIndexBeforePrice = catalogPriceWithTrash.LastIndexOf('>');
-                string catalogPriceString = catalogPriceWithTrash.Substring(lastIndexBeforePrice + 1);
+                string catalogPriceString = catalogPriceWithTrash.Substring(lastIndexBeforePrice + 1).Replace(',', '.');
                 return decimal.Parse(catalogPriceString);
             }
             catch (Exception)
