@@ -15,7 +15,7 @@ namespace AllegroBricks
 {
     public static class AddSubscriptionFunction
     {
-        [FunctionName("AddSubscriptionFunction")]
+        [FunctionName("AddSubscription")]
         public static async Task<IActionResult> Run(
             [HttpTrigger(AuthorizationLevel.Anonymous, "post", Route = null)] HttpRequest req,
             ILogger log)
@@ -56,8 +56,7 @@ namespace AllegroBricks
 
         private async static Task AddNewSubscription(string mail, string number, int? diffPercent, int? diffPln)
         {
-            string str = Environment.GetEnvironmentVariable("sqldb_connectionstring");
-            using SqlConnection conn = new SqlConnection(str);
+            using SqlConnection conn = ConnectionFactory.CreateConnection();
             conn.Open();
             Subscriber subscriber = SubscriptionDbUtilities.GetOrCreateSubscriber(conn, mail);
             LegoSet set = await SubscriptionDbUtilities.GetOrCreateSet(conn, int.Parse(number));

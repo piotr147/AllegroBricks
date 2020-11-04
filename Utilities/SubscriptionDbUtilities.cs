@@ -1,5 +1,6 @@
 ﻿using AllegroBricks.Models;
 using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Threading.Tasks;
@@ -26,7 +27,7 @@ namespace AllegroBricks.Utilities
             };
         }
 
-        private static bool SubscriberExists(SqlConnection conn, string mail)
+        public static bool SubscriberExists(SqlConnection conn, string mail)
         {
             string query = @"select count(*) from Subscribers where email = @email and isdeleted = 0;";
 
@@ -45,6 +46,46 @@ namespace AllegroBricks.Utilities
             cmd.ExecuteNonQuery();
 
             return ExistingSubscriber(conn, mail).Value;
+        }
+
+        internal static List<SubscriptionToList> GetActiveSubscriptionsOfUser(SqlConnection conn, string mail)
+        {
+            string query = @"
+                Select s2.email, st.number, st.name, st.series, s1.diffPercent, s1.diffPln, s1.lastReportedPrice, s1.lastUpdate
+                from LegoSets st
+                join subscriptions s1 on s1.setnumber = st.number
+                join subscribers s2 on s2.id = s1.subscriberid
+                where s2.email = @email and s1.isdeleted = 0";
+
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            cmd.Parameters.Add("@email", SqlDbType.VarChar).Value = mail;
+
+            return ReadSubscriptionsToList(cmd.ExecuteReader());
+        }
+
+        private static List<SubscriptionToList> ReadSubscriptionsToList(SqlDataReader reader)
+        {
+            List<SubscriptionToList> subscriptions = new List<SubscriptionToList>();
+
+            using (reader)
+            {
+                while (reader.Read())
+                {
+                    subscriptions.Add(new SubscriptionToList
+                    {
+                        Mail = reader.GetString(0),
+                        CatalogNumber = reader.GetInt32(1),
+                        Name = reader.GetString(2),
+                        Series = reader.GetString(3),
+                        DiffPercent = reader.IsDBNull(4) ? null : (int?)reader.GetInt32(4),
+                        DiffPln = reader.IsDBNull(5) ? null : (int?)reader.GetInt32(5),
+                        LastReportedPrice = reader.IsDBNull(6) ? null : (decimal?)reader.GetDouble(6),
+                        LastUpdate = reader.GetDateTime(7),
+                    });
+                }
+            }
+
+            return subscriptions;
         }
 
         private static int? ExistingSubscriber(SqlConnection conn, string mail)
