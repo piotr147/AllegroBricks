@@ -15,7 +15,7 @@ namespace AllegroBricks.Models
         public decimal? LowestPriceEver { get; set; }
         public decimal? CatalogPrice { get; set; }
         public bool NotificationToSend { get; set; }
-        public DateTime LastPriceUpdate { get; set; }
+        public DateTime LastUpdate { get; set; }
         public int ReleaseYear { get; set; }
 
         public LegoSet WithAllegroSearchUrl(string url)
@@ -32,13 +32,17 @@ namespace AllegroBricks.Models
 
         public LegoSet WithLowestPrice(decimal price)
         {
+            if(price != LowestPrice)
+            {
+                NotificationToSend = true;
+            }
             LowestPrice = price;
             return this;
         }
 
         public LegoSet UpdateLastUpdate()
         {
-            LastPriceUpdate = DateTime.Now;
+            LastUpdate = DateTime.Now;
             return this;
         }
     }

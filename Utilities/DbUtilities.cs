@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace AllegroBricks.Utilities
 {
-    public static class SubscriptionDbUtilities
+    public static class DbUtilities
     {
         public static Subscriber GetOrCreateSubscriber(SqlConnection conn, string mail)
         {
@@ -25,6 +25,54 @@ namespace AllegroBricks.Utilities
                 Id = CreateNewSubscriber(conn, mail),
                 Email = mail
             };
+        }
+
+        public static List<LegoSet> GetSetsOfActiveSubscriptionsWithNumberBeingReminderOf(SqlConnection conn, int remainder, int divisor)
+        {
+            string query = @"
+                select * from LegoSets 
+                where number in (
+                    select setNumber from Subscriptions
+                    group by setNumber, isDeleted
+                    having isDeleted = 0 )
+                and number % @divisor = @remainder
+                ;";
+
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            cmd.Parameters.Add("@divisor", SqlDbType.Int).Value = divisor;
+            cmd.Parameters.Add("@remainder", SqlDbType.Int).Value = remainder;
+            using SqlDataReader reader = cmd.ExecuteReader();
+
+            return ReadAllSets(reader);
+        }
+
+        private static List<LegoSet> ReadAllSets(SqlDataReader reader)
+        {
+            List<LegoSet> result = new List<LegoSet>();
+            while (reader.Read())
+            {
+                result.Add(ReadSet(reader));
+            }
+
+            return result;
+        }
+
+        public static void UpdateSetInDb(SqlConnection conn, LegoSet set)
+        {
+            string query = @"
+                Update LegoSets
+                set allegroLowestUrl = @allegroLowestUrl,
+                lowestPrice = @lowestPrice,
+                notificationToSend = @notificationToSend,
+                lastUpdate = GETDATE()
+                ;";
+
+            using SqlCommand cmd = new SqlCommand(query, conn);
+            cmd.Parameters.Add("@allegroLowestUrl", SqlDbType.VarChar).Value = set.AllegroLowestUrl;
+            cmd.Parameters.Add("@lowestPrice", SqlDbType.Float).Value = set.LowestPrice;
+            cmd.Parameters.Add("@notificationToSend", SqlDbType.Bit).Value = set.NotificationToSend;
+
+            cmd.ExecuteNonQuery();
         }
 
         public static bool SubscriberExists(SqlConnection conn, string mail)
@@ -238,7 +286,7 @@ namespace AllegroBricks.Utilities
                 LowestPriceEver = reader.IsDBNull(7) ? null : (decimal?)reader.GetDouble(7),
                 CatalogPrice = reader.IsDBNull(8) ? null : (decimal?)reader.GetDouble(8),
                 NotificationToSend = reader.GetBoolean(9),
-                LastPriceUpdate = reader.GetDateTime(10),
+                LastUpdate = reader.GetDateTime(10),
                 ReleaseYear = reader.GetInt32(11)
             };
         }

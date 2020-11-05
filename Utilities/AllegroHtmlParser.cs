@@ -16,7 +16,7 @@ namespace AllegroBricks.Utilities
         private static readonly Regex SetUrlRegex = new Regex(@"https://allegro.*?""");
         private static readonly Regex PriceWithTrashRegex = new Regex(@"\d*,<(.|[\n\r])*?zł");
 
-        public static async Task<LegoSet> GetSetInfo(LegoSet legoSet)
+        public static async Task<LegoSet> UpdateSetInfo(LegoSet legoSet)
         {
             HttpWebRequest request = (HttpWebRequest)WebRequest.Create(legoSet.AllegroSearchUrl);
             HttpWebResponse response = (HttpWebResponse)(await request.GetResponseAsync());

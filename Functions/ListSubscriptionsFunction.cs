@@ -44,12 +44,12 @@ namespace AllegroBricks.Functions
             using SqlConnection conn = ConnectionFactory.CreateConnection();
             conn.Open();
 
-            if (!SubscriptionDbUtilities.SubscriberExists(conn, mail))
+            if (!DbUtilities.SubscriberExists(conn, mail))
             {
                 return new HttpResponseMessage(HttpStatusCode.BadRequest);
             }
 
-            List<SubscriptionToList> subscribedSets = SubscriptionDbUtilities.GetActiveSubscriptionsOfUser(conn, mail);
+            List<SubscriptionToList> subscribedSets = DbUtilities.GetActiveSubscriptionsOfUser(conn, mail);
             var json = JsonConvert.SerializeObject(new { subscriptions = subscribedSets }, Formatting.Indented);
             return new HttpResponseMessage(HttpStatusCode.OK)
             {

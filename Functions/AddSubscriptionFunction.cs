@@ -61,10 +61,10 @@ namespace AllegroBricks
         {
             using SqlConnection conn = ConnectionFactory.CreateConnection();
             conn.Open();
-            Subscriber subscriber = SubscriptionDbUtilities.GetOrCreateSubscriber(conn, mail);
-            LegoSet set = await SubscriptionDbUtilities.GetOrCreateSet(conn, int.Parse(number));
+            Subscriber subscriber = DbUtilities.GetOrCreateSubscriber(conn, mail);
+            LegoSet set = await DbUtilities.GetOrCreateSet(conn, int.Parse(number));
             Subscription subscription = CreateSubscription(subscriber, set, diffPercent, diffPln);
-            SubscriptionDbUtilities.CreateOrUpdateSubscriptionInDb(conn, subscription);
+            DbUtilities.CreateOrUpdateSubscriptionInDb(conn, subscription);
 
             return set.Name;
         }

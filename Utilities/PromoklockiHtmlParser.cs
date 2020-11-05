@@ -56,7 +56,7 @@ namespace AllegroBricks.Utilities
                     LowestPriceEver = lowestPriceEver,
                     CatalogPrice = catalogPrice,
                     NotificationToSend = false,
-                    LastPriceUpdate = DateTime.Now,
+                    LastUpdate = DateTime.Now,
                     ReleaseYear = releaseYear
                 };
             }
