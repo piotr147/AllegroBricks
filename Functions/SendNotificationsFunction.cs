@@ -21,7 +21,7 @@ namespace AllegroBricks.Functions
 
             try
             {
-                await TrySendNotifications(log);
+                await TrySendNotificationsAndUpdateSubscriptions(log);
             }
             catch (Exception e)
             {
@@ -30,7 +30,7 @@ namespace AllegroBricks.Functions
             }
         }
 
-        private static async Task TrySendNotifications(ILogger log)
+        private static async Task TrySendNotificationsAndUpdateSubscriptions(ILogger log)
         {
             using SqlConnection conn = ConnectionFactory.CreateConnection();
             conn.Open();
@@ -68,10 +68,7 @@ namespace AllegroBricks.Functions
                 }
             }
 
-            //Dictionary<(int number, bool isBigUpdate), MailMessage> messages = MessageCreator.GetMessagesForUpdatedSets(updatedSets);
-
-            //await EmailSender.SendEmails(subscriptions, messages);
-            //DbUtils.UpdateSetsAfterSendingEmails(conn, updatedSets);
+            DbUtilities.UpdateSetsWithNotifcationSent(conn);
         }
     }
 }

@@ -84,11 +84,22 @@ namespace AllegroBricks.Utilities
                 ;";
 
                 SqlCommand cmd = new SqlCommand(query, conn);
-                cmd.Parameters.Add("@lastReportedPrice", SqlDbType.Int).Value = subSet.set.LowestPrice;
+                cmd.Parameters.Add("@lastReportedPrice", SqlDbType.Float).Value = subSet.set.LowestPrice;
                 cmd.Parameters.Add("@subscriberId", SqlDbType.Int).Value = subSet.subscription.SubscriberId;
                 cmd.Parameters.Add("@setNumber", SqlDbType.Int).Value = subSet.subscription.SetNumber;
                 cmd.ExecuteNonQuery();
             }
+        }
+
+        public static void UpdateSetsWithNotifcationSent(SqlConnection conn)
+        {
+            string query = @"
+                Update LegoSets
+                set notificationToSend = 0
+                ;";
+
+            SqlCommand cmd = new SqlCommand(query, conn);
+            cmd.ExecuteNonQuery();
         }
 
         private static List<Subscription> ReadAllSubscriptions(SqlDataReader reader)
