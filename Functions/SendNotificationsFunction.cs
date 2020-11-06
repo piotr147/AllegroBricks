@@ -15,7 +15,7 @@ namespace AllegroBricks.Functions
     public static class SendNotificationsFunction
     {
         [FunctionName("SendNotifications")]
-        public static async Task Run([TimerTrigger("0 * * * * *")]TimerInfo myTimer, ILogger log)
+        public static async Task Run([TimerTrigger("0 0/15 4-23 * * *")]TimerInfo myTimer, ILogger log)
         {
             log.LogInformation($"C# Timer trigger function executed at: {DateTime.Now}");
 
@@ -51,8 +51,13 @@ namespace AllegroBricks.Functions
                 try
                 {
                     Response response = await EmailSender.PrepareAndSendEmail(subscriber.Email, subscriptionsWithSets);
-                    log.LogInformation(response.StatusCode.ToString());
-                    if (response.StatusCode != HttpStatusCode.Accepted && response.StatusCode != HttpStatusCode.OK) continue;
+                    log.LogInformation(response?.StatusCode.ToString() ?? "Email has not been sent");
+                    if (response == null
+                        || response.StatusCode != HttpStatusCode.Accepted
+                        && response.StatusCode != HttpStatusCode.OK)
+                    {
+                        continue;
+                    }
 
                     DbUtilities.UpdateSubscriptionsWithReportedPrices(conn, subscriptionsWithSets);
                 }

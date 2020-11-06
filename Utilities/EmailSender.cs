@@ -17,7 +17,9 @@ namespace AllegroBricks.Utilities
         public static Task<Response> PrepareAndSendEmail(string email, List<(Subscription subscription, LegoSet set)> subscriptionsWithSets)
         {
             (string htmlMessage, string plainMessage) = PrepareMessages(subscriptionsWithSets);
-            string subject = $"Lego update {DateTime.Now.Day:D2}.{DateTime.Now.Month:D2}";
+
+            if (string.IsNullOrEmpty(htmlMessage) || string.IsNullOrEmpty(plainMessage)) return null;
+
             var senderMail = new EmailAddress(SENDER_EMAIL, SENDER_NAME);
             var receiverMail = new EmailAddress(email, "Brick buddy");
             SendGridMessage msg = MailHelper.CreateSingleEmail(senderMail, receiverMail, EMAIL_SUBJECT, plainMessage, htmlMessage);
