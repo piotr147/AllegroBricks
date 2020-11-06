@@ -11,11 +11,11 @@ namespace AllegroBricks.Utilities
     {
         public static Subscriber GetOrCreateSubscriber(SqlConnection conn, string mail)
         {
-            if(SubscriberExists(conn, mail))
+            if (SubscriberExists(conn, mail))
             {
                 return new Subscriber
                 {
-                    Id = ExistingSubscriber(conn, mail).Value,
+                    Id = GetExistingSubscriberId(conn, mail).Value,
                     Email = mail
                 };
             }
@@ -26,6 +26,112 @@ namespace AllegroBricks.Utilities
                 Email = mail
             };
         }
+
+        public static List<Subscriber> GetAllSubscribersWithActiveSubscriptions(SqlConnection conn)
+        {
+            string query = @"
+                select * from subscribers subers
+                where subers.id in (
+                    select subscriberId from subscriptions
+                    group by subscriberId, isdeleted
+                    having isdeleted = 0
+                )
+                and subers.isdeleted = 0;";
+
+            SqlCommand cmd = new SqlCommand(query, conn);
+            using SqlDataReader reader = cmd.ExecuteReader();
+
+            return ReadAllSubscribers(reader);
+        }
+
+        public static List<LegoSet> GetAllSetsWithNotificationToSend(SqlConnection conn)
+        {
+            string query = @"
+                select * from LegoSets
+                where notificationToSend = 1";
+
+            SqlCommand cmd = new SqlCommand(query, conn);
+            using SqlDataReader reader = cmd.ExecuteReader();
+
+            return ReadAllSets(reader);
+        }
+
+        public static List<Subscription> GetSubscriptionsOfSubscriberWithId(SqlConnection conn, int id)
+        {
+            string query = @"
+                select * from subscriptions
+                where subscriberId = @subscriberId
+                and isdeleted = 0
+                ;";
+
+            SqlCommand cmd = new SqlCommand(query, conn);
+            cmd.Parameters.Add("@subscriberId", SqlDbType.Int).Value = id;
+            using SqlDataReader reader = cmd.ExecuteReader();
+
+            return ReadAllSubscriptions(reader);
+        }
+
+        public static void UpdateSubscriptionsWithReportedPrices(SqlConnection conn, List<(Subscription subscription, LegoSet set)> subscriptionsWithSets)
+        {
+            foreach (var subSet in subscriptionsWithSets)
+            {
+                string query = @"
+                    update Subscriptions
+                    set lastReportedPrice = @lastReportedPrice,
+                    lastUpdate = GETDATE()
+                    where subscriberId = @subscriberId
+                    and setNumber = @setNumber
+                ;";
+
+                SqlCommand cmd = new SqlCommand(query, conn);
+                cmd.Parameters.Add("@lastReportedPrice", SqlDbType.Int).Value = subSet.set.LowestPrice;
+                cmd.Parameters.Add("@subscriberId", SqlDbType.Int).Value = subSet.subscription.SubscriberId;
+                cmd.Parameters.Add("@setNumber", SqlDbType.Int).Value = subSet.subscription.SetNumber;
+                cmd.ExecuteNonQuery();
+            }
+        }
+
+        private static List<Subscription> ReadAllSubscriptions(SqlDataReader reader)
+        {
+            List<Subscription> result = new List<Subscription>();
+            while (reader.Read())
+            {
+                result.Add(ReadSubscription(reader));
+            }
+
+            return result;
+        }
+
+        private static Subscription ReadSubscription(SqlDataReader reader) =>
+            new Subscription
+            {
+                SubscriberId = reader.GetInt32(0),
+                SetNumber = reader.GetInt32(1),
+                LastReportedPrice = (decimal)reader.GetDouble(2),
+                DiffPercent = reader.IsDBNull(3) ? null : (int?)reader.GetInt32(3),
+                DiffPln = reader.IsDBNull(4) ? null : (int?)reader.GetInt32(4),
+                LastUpdate = reader.GetDateTime(5),
+                IsDeleted = reader.GetBoolean(6)
+            };
+
+        private static List<Subscriber> ReadAllSubscribers(SqlDataReader reader)
+        {
+            List<Subscriber> result = new List<Subscriber>();
+
+            while (reader.Read())
+            {
+                result.Add(ReadSubscriber(reader));
+            }
+
+            return result;
+        }
+
+        private static Subscriber ReadSubscriber(SqlDataReader reader) =>
+            new Subscriber
+            {
+                Id = reader.GetInt32(0),
+                Email = reader.GetString(1)
+            };
 
         public static List<LegoSet> GetSetsOfActiveSubscriptionsWithNumberBeingReminderOf(SqlConnection conn, int remainder, int divisor)
         {
@@ -93,7 +199,7 @@ namespace AllegroBricks.Utilities
             cmd.Parameters.Add("@email", SqlDbType.VarChar, 100).Value = mail;
             cmd.ExecuteNonQuery();
 
-            return ExistingSubscriber(conn, mail).Value;
+            return GetExistingSubscriberId(conn, mail).Value;
         }
 
         internal static List<SubscriptionToList> GetActiveSubscriptionsOfUser(SqlConnection conn, string mail)
@@ -107,36 +213,37 @@ namespace AllegroBricks.Utilities
 
             using SqlCommand cmd = new SqlCommand(query, conn);
             cmd.Parameters.Add("@email", SqlDbType.VarChar).Value = mail;
-
-            return ReadSubscriptionsToList(cmd.ExecuteReader());
+            using SqlDataReader reader = cmd.ExecuteReader();
+            return ReadAllSubscriptionsToList(cmd.ExecuteReader());
         }
 
-        private static List<SubscriptionToList> ReadSubscriptionsToList(SqlDataReader reader)
+        private static List<SubscriptionToList> ReadAllSubscriptionsToList(SqlDataReader reader)
         {
             List<SubscriptionToList> subscriptions = new List<SubscriptionToList>();
 
-            using (reader)
+
+            while (reader.Read())
             {
-                while (reader.Read())
-                {
-                    subscriptions.Add(new SubscriptionToList
-                    {
-                        Mail = reader.GetString(0),
-                        CatalogNumber = reader.GetInt32(1),
-                        Name = reader.GetString(2),
-                        Series = reader.GetString(3),
-                        DiffPercent = reader.IsDBNull(4) ? null : (int?)reader.GetInt32(4),
-                        DiffPln = reader.IsDBNull(5) ? null : (int?)reader.GetInt32(5),
-                        LastReportedPrice = reader.IsDBNull(6) ? null : (decimal?)reader.GetDouble(6),
-                        LastUpdate = reader.GetDateTime(7),
-                    });
-                }
+                subscriptions.Add(ReadAllSubscriptionToList(reader));
             }
 
             return subscriptions;
         }
 
-        private static int? ExistingSubscriber(SqlConnection conn, string mail)
+        private static SubscriptionToList ReadAllSubscriptionToList(SqlDataReader reader) =>
+            new SubscriptionToList
+            {
+                Mail = reader.GetString(0),
+                CatalogNumber = reader.GetInt32(1),
+                Name = reader.GetString(2),
+                Series = reader.GetString(3),
+                DiffPercent = reader.IsDBNull(4) ? null : (int?)reader.GetInt32(4),
+                DiffPln = reader.IsDBNull(5) ? null : (int?)reader.GetInt32(5),
+                LastReportedPrice = reader.IsDBNull(6) ? null : (decimal?)reader.GetDouble(6),
+                LastUpdate = reader.GetDateTime(7),
+            };
+
+        private static int? GetExistingSubscriberId(SqlConnection conn, string mail)
         {
             string query = @"select id from Subscribers where email = @email and isdeleted = 0;";
 
@@ -144,7 +251,7 @@ namespace AllegroBricks.Utilities
             cmd.Parameters.Add("@email", SqlDbType.VarChar).Value = mail;
             using SqlDataReader reader = cmd.ExecuteReader();
 
-            if(reader.Read())
+            if (reader.Read())
             {
                 return reader.GetInt32(0);
             }
@@ -154,7 +261,7 @@ namespace AllegroBricks.Utilities
 
         public async static Task<LegoSet> GetOrCreateSet(SqlConnection conn, int number)
         {
-            if(SetExists(conn, number))
+            if (SetExists(conn, number))
             {
                 return GetExistingSet(conn, number);
             }
@@ -213,7 +320,7 @@ namespace AllegroBricks.Utilities
 
         public static void CreateOrUpdateSubscriptionInDb(SqlConnection conn, Subscription subscription)
         {
-            if(SubscriptionExists(conn, subscription))
+            if (SubscriptionExists(conn, subscription))
             {
                 UpdateExistingSubscription(conn, subscription);
                 return;
@@ -227,7 +334,7 @@ namespace AllegroBricks.Utilities
             string query = @"
                 select count(*) from Subscriptions
                 where subscriberId = @subscriberId and setNumber = @setNumber;";
-            
+
             using SqlCommand cmd = new SqlCommand(query, conn);
             cmd.Parameters.Add("@subscriberId", SqlDbType.Int).Value = subscription.SubscriberId;
             cmd.Parameters.Add("@setNumber", SqlDbType.Int).Value = subscription.SetNumber;
